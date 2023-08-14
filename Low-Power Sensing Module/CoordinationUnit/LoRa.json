@@ -1,0 +1,25 @@
+{
+    "name": "T",
+    "chunk_size": 235,
+    "mesh_mode": false,
+    "debug": true,
+  
+    "connector": {
+      "sf": 7,
+      "freq": 868,
+      "min_timeout": 0.5,
+      "max_timeout": 12
+      },
+	
+	"interface":{
+		"uartid":1,
+		"baud": 115200,
+    "tx": 12, 
+    "rx": 34,
+		"bits":8, 
+		"parity": null, 
+		"stop": 1, 
+    "mode": "source"
+	}
+  }
+  
