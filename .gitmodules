@@ -1,0 +1,4 @@
+[submodule "Low-Power Sensing Module/Collector/NiclaVision/CustomFirmware/openmv"]
+	path = Low-Power Sensing Module/Collector/NiclaVision/CustomFirmware/openmv
+	url = https://github.com/baarratia/openmv.git
+	branch = custom_changes
