@@ -12,6 +12,7 @@ print("Starting...")
 relay_pin.off()
 time.sleep(3)
 
+
 buffer_size = 60
 buffer = []
 
@@ -19,19 +20,42 @@ def check_esp32_signal():
     return relay_pin.value() == 0
 
 sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
-sensor.set_windowing((240, 240))
+
+rgb = True
+size96x96 = True
+
+# Set pixel format
+if rgb:
+    sensor.set_pixformat(sensor.RGB565)
+else:
+    sensor.set_pixformat(sensor.GRAYSCALE)
+
+# Set framesize and windowing
+if size96x96:
+    sensor.set_framesize(sensor.QQVGA) # QQVGA is 160x120
+    sensor.set_windowing((64, 12, 96, 96)) # Crop to 96x96 from the center
+else:
+    sensor.set_framesize(sensor.HQVGA) # HQVGA is 240x160
+    sensor.set_windowing((40, 0, 160, 160)) # Crop to 160x160 from the center
+
 sensor.set_vflip(True)
 sensor.skip_frames(time=2000)
 
 net = None
 labels = None
 
+mem_before = gc.mem_free()
+print("Free RAM before model load:", mem_before)
+
 try:
-    labels, net = tf.load_builtin_model('trained')
+    labels, net = tf.load_builtin_model('trained')  #'water_detector'
 except Exception as e:
-    raise Exception(e)
+    raise Exception(f"Error loading model {e}")
+
+# Check memory after loading the model
+mem_after = gc.mem_free()
+print("Free RAM after model load:", mem_after)
+print("Estimated RAM used by model:", mem_before - mem_after)
 
 clock = time.clock()
 
@@ -52,7 +76,22 @@ while True:
 
         for obj in net.classify(img, min_scale=1.0, scale_mul=0.8, x_overlap=0.5, y_overlap=0.5):
             predictions_list = list(zip(labels, obj.output()))
+            print(predictions_list)
+            """
+            if predictions_list[0][1] >= 0.5:
+                print(predictions_list[0][0], "!!!")
+                red_led.off()
+                green_led.off()
+                blue_led.on()
+                buffer.append(True)
+            else:
+                print("Dry", "!!!")
+                red_led.off()
+                blue_led.off()
+                green_led.on()
+                buffer.append(False)
 
+            """
             if predictions_list[0][1] > predictions_list[1][1]:
                 print(predictions_list[0][0], "!!!")
                 red_led.off()

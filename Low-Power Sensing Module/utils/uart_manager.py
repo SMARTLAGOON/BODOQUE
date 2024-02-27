@@ -20,10 +20,10 @@ class UART_manager:
         # set pullup for rx pin
         #machine.Pin(self.rx, machine.Pin.IN, machine.Pin.PULL_UP)
         self.ser = machine.UART(1, baudrate=self.br)
-        self.ser.init(baudrate=self.br, tx=self.tx, rx=self.rx, 
-                      bits=self.bits, parity=self.parity, stop=self.stop)
+        self.ser.init(baudrate=self.br, tx=self.tx, rx=self.rx,
+                        bits=self.bits, parity=self.parity, stop=self.stop, timeout=2000)
         
-        self.CHUNK_SIZE = 255
+        self.CHUNK_SIZE = 512
 
     def read_data(self, path):
         line = self.ser.readline()
@@ -167,5 +167,87 @@ class UART_manager:
                 print("Error creating file: {}".format(e))
                 return
 
-
     
+    def read_zipfile(self, path):
+       try:
+            writer = None
+            while True:
+
+                header = self.ser.readline()
+                try:
+                    header = header.decode().strip()
+
+                except Exception as e:
+                    if header is not None:
+                        print("Header: ", header)
+                        print("Error decoding header: {}".format(e))
+                    header = None
+
+                if header:
+                    print(header)
+
+                    if header == 'START':
+                        self.ser.write(b'LISTEN\n')
+                        self.ser.flush()
+                        print("Sent LISTEN")
+                        # Get file's label, size and checksum
+
+                        rec = ""
+                        size = self.ser.readline(8)
+                        rec += str(size) + " - "
+                        size = int(size) # read fixed size int
+                        print("Size {}".format(size))
+                        self.ser.read(1)  # Skip newline character
+                        filename = self.ser.read(26)  # Read fixed-size string
+                        rec += str(filename.decode('utf-8')) + " - "
+                        print("Filename {}".format(filename.decode('utf-8')))
+                        self.ser.read(1)  # Skip newline character
+                        checksum = int(self.ser.read(10))  # Read fixed-size string
+                        rec += str(checksum) + " - "
+                        print("Checksum {}".format(checksum))
+                        self.ser.read(1)  # Skip newline character
+                        print("Metadata filename {}, size: {}, checksum {}".format(filename.decode('utf-8'), size, checksum))
+                        filename = filename.decode()
+                        filename = filename[2:4] + filename[5:7] + filename[8:10] + filename[11:13] + filename[-3:]
+                        namepath = path + '/' + filename
+                        print("Creating file: {}".format(namepath))
+                        writer = OnDemandFileWriter(namepath)
+                        # Read and write image data in chunks
+                        zip_data_size = 0
+                        zip_data_checksum = binascii.crc32(b'')
+
+                    elif header == 'END':
+                        if zip_data_size != size:
+                            raise ValueError("Zip size mismatch {} != {}".format(zip_data_size, size))
+                        if zip_data_checksum != checksum:
+                            raise ValueError("Checksum mismatch")
+                        self.ser.write(b'OK\n')
+                        print("Zip received successfully")
+
+                        # Close the writer
+                        writer.close()
+                        return filename
+
+                    else:
+                        # at this point header should contain the checksum for the chunk
+                        expected_checksum = int(header)
+                        chunk = self.ser.read(min(self.CHUNK_SIZE, size-zip_data_size))
+                        received_checksum = binascii.crc32(chunk) & 0xffffffff
+
+                        if received_checksum == expected_checksum:
+                            self.ser.write(b'ACK\n')
+                            writer.write(bytes(chunk))
+                            zip_data_size += len(chunk)
+                            zip_data_checksum = binascii.crc32(chunk, zip_data_checksum)
+
+                        else:
+                            self.ser.write(b'NACK\n')
+                
+       except Exception as e:
+            print("Error creating file: {}".format(e))
+            if writer:
+                writer.close()
+                # Erase file
+                os.remove(namepath)
+                gc.collect()
+            return None
