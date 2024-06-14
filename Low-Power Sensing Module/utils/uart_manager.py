@@ -208,7 +208,7 @@ class UART_manager:
                         self.ser.read(1)  # Skip newline character
                         print("Metadata filename {}, size: {}, checksum {}".format(filename.decode('utf-8'), size, checksum))
                         filename = filename.decode()
-                        filename = filename[2:4] + filename[5:7] + filename[8:10] + filename[11:13] + filename[-3:]
+                        #filename = filename[2:4] + filename[5:7] + filename[8:10] + filename[11:13] + filename[-3:]
                         namepath = path + '/' + filename
                         print("Creating file: {}".format(namepath))
                         writer = OnDemandFileWriter(namepath)
