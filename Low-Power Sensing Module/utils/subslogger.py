@@ -1,3 +1,6 @@
+# Based on: https://github.com/majoson-chen/micropython-ulogger/tree/main?tab=readme-ov-file#readme
+# Thanks to the authors!
+
 import os
 import ujson
 from utime import time, sleep, sleep_ms
