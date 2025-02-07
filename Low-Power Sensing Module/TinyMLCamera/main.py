@@ -97,13 +97,13 @@ while True:
                 red_led.off()
                 blue_led.off()
                 green_led.on()
-                buffer.append(False)
+                buffer.append(False)    # NO AGUA
             else:
                 print(predictions_list[1][0], "!!!")
                 red_led.off()
                 green_led.off()
                 blue_led.on()
-                buffer.append(True)
+                buffer.append(True) # AGUA
 
             if len(buffer) > buffer_size:
                 buffer.pop(0)
